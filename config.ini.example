@@ -1,0 +1,13 @@
+[MATRIX]
+homeserver = 'https://matrix.org'
+user = '@YOUR_USERNAME:matrix.org'
+password = 'YOUR_PASSWORD_USED_TO_LOGIN_INTO_MATRIX'
+room_id = '!YOUR_ROOM_ID:matrix.org'
+
+[MQTT]
+host = YOUR_HOST.hivemq.cloud
+user = YOUR_MQTT_USER
+password = YOUR_MQTT_PASSWORD
+port = 8883
+topic_sub = mqttbridge/sub
+topic_pub = mqttbridge/pub
