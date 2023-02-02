@@ -1,5 +1,52 @@
 # Matrix-MQTT-Bridge
 
-Work in progress.
+This project was created to create bridge between the Matrix Messenger and the MQTT protocol. I'm using this to control a microcontroller / Raspberry Pi Pico over a Matrix chat.
 
-Note: Matrix room has to be **unencrypted**.
+![Matrix-MQTT-Bridge](docs/phone_to_pico_transparent.png?raw=true)
+
+-----
+
+## Setup
+You can run the Matrix-MQTT-Bridge via Docker, e.g. by using this `docker-compose.yaml` file. You will have to create a `config.ini` file to configure the connection to the MQTT broker and to the Matrix server. I'm using this project in combination with a **free private** HiveMQ cloud instance, which acts as my MQTT broker.
+
+```yaml
+version: "3.9"
+
+services:
+  matrix-mqtt-bridge:
+    image: ghcr.io/rubenhoenle/matrix-mqtt-bridge:latest
+    container_name: matrix-mqtt-bridge
+    restart: always
+    volumes:
+      - ./config.ini:/config.ini
+```
+-----
+
+## Config file
+The `config.ini` is split into two parts: The Matrix configuration and the configuration for the MQTT connection.
+
+### Matrix configuration
+You will need two Matrix accounts: The one you are using on e.g. your phone (I'm using my regular, personal Matrix Account for this) and this Matrix-MQTT-Bridge will require it's own account. After you have created a seperate Matrix account for the Matrix-MQTT-Bridge, create a new chatroom and with one of your accounts and add the other account to this room. Now, check if your able to write / recieve messages in this chatroom using your two different accounts.
+
+**Important: Matrix room has to be unencrypted. Do not enable encryption when creating the Matrix chatroom!**
+
+### MQTT configuration
+Is actually self-explanatory. Enter your Host (for me it's my HiveMQ cloud instance), the port and the credentials to connect to the MQTT message broker (username / password).     
+- The `topic_sub` is the MQTT topic the Matrix-MQTT-Bridge will **subscribe** to. All MQTT messages recieved on this topic will be sent into the Matrix chatroom by the bridge.
+- When the Matrix-MQTT-Bridge recieves a message via Matrix, it will publish this message to the MQTT broker using the topic specified in `topic_pub`.
+
+```ini
+[MATRIX]
+homeserver = 'https://matrix.org'
+user = '@YOUR_USERNAME:matrix.org'
+password = 'YOUR_PASSWORD_USED_TO_LOGIN_INTO_MATRIX'
+room_id = '!YOUR_ROOM_ID:matrix.org'
+
+[MQTT]
+host = YOUR_HOST.hivemq.cloud
+user = YOUR_MQTT_USER
+password = YOUR_MQTT_PASSWORD
+port = 8883
+topic_sub = mqttbridge/sub
+topic_pub = mqttbridge/pub
+```
