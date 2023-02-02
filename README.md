@@ -1,13 +1,13 @@
 # Matrix-MQTT-Bridge
 
-This project was created to create bridge between the Matrix Messenger and the MQTT protocol. I'm using this to control a microcontroller / Raspberry Pi Pico over a Matrix chat.
+This project was created to create bridge between the Matrix Messenger and the MQTT protocol. I'm using this to control a microcontroller / Raspberry Pi Pico over a Matrix chat. Using this project the microcontroller is able to recieve the messages posted into the Matrix chat (like in the graphic). MQTT Messages which get published by the microcontroller get also forwarded into the Matrix chat by the Matrix-MQTT-Bridge.
 
-![Matrix-MQTT-Bridge](docs/phone_to_pico_transparent.png?raw=true)
+![Matrix-MQTT-Bridge](docs/phone_to_pico.png?raw=true)
 
 -----
 
 ## Setup
-You can run the Matrix-MQTT-Bridge via Docker, e.g. by using this `docker-compose.yaml` file. You will have to create a `config.ini` file to configure the connection to the MQTT broker and to the Matrix server. I'm using this project in combination with a **free private** HiveMQ cloud instance, which acts as my MQTT broker.
+You can run the Matrix-MQTT-Bridge via Docker, e.g. by using this `docker-compose.yaml` file. You will have to create a `config.ini` file to configure the connection to the MQTT broker and to the Matrix server. I'm using this project in combination with a **free private** [HiveMQ cloud instance](https://console.hivemq.cloud/), which acts as my MQTT broker.
 
 ```yaml
 version: "3.9"
