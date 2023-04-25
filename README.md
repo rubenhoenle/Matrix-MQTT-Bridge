@@ -47,6 +47,7 @@ host = YOUR_HOST.hivemq.cloud
 user = YOUR_MQTT_USER
 password = YOUR_MQTT_PASSWORD
 port = 8883
+tls = true
 topic_sub = mqttbridge/sub
 topic_pub = mqttbridge/pub
 ```
