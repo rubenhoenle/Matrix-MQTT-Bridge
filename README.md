@@ -37,10 +37,10 @@ Is actually self-explanatory. Enter your Host (for me it's my HiveMQ cloud insta
 
 ```ini
 [MATRIX]
-homeserver = 'https://matrix.org'
-user = '@YOUR_USERNAME:matrix.org'
-password = 'YOUR_PASSWORD_USED_TO_LOGIN_INTO_MATRIX'
-room_id = '!YOUR_ROOM_ID:matrix.org'
+homeserver = https://matrix.org
+user = @YOUR_USERNAME:matrix.org
+password = YOUR_PASSWORD_USED_TO_LOGIN_INTO_MATRIX
+room_id = !YOUR_ROOM_ID:matrix.org
 
 [MQTT]
 host = YOUR_HOST.hivemq.cloud
