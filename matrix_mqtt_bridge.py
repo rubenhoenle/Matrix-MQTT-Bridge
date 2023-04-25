@@ -26,6 +26,7 @@ mqtt_host = config.get("MQTT", "host")
 mqtt_user = config.get("MQTT", "user")
 mqtt_password = config.get("MQTT", "password")
 mqtt_port = config.get("MQTT", "port")
+mqtt_tls = config.getboolean("MQTT", "tls")
 mqtt_topic_sub = config.get("MQTT", "topic_sub")
 mqtt_topic_pub = config.get("MQTT", "topic_pub")
 
@@ -92,11 +93,12 @@ def on_message(client, userdata, msg):
 # using MQTT version 5 here, for 3.1.1: MQTTv311, 3.1: MQTTv31
 # userdata is user defined data of any type, updated by user_data_set()
 # client_id is the given name of the client
-mqtt_client = paho.Client(client_id="Matrix-MQTT-Bridge", userdata=None, protocol=paho.MQTTv5)
+mqtt_client = paho.Client(client_id="Matrix-MQTT-Bridge", userdata=None, protocol=paho.MQTTv31)
 mqtt_client.on_connect = on_connect
 
 # enable TLS for secure MQTT connection
-mqtt_client.tls_set(tls_version=mqtt.client.ssl.PROTOCOL_TLS)
+if (mqtt_tls):
+    mqtt_client.tls_set(tls_version=mqtt.client.ssl.PROTOCOL_TLS)
 
 mqtt_client.username_pw_set(mqtt_user, mqtt_password)
 mqtt_client.connect(mqtt_host, int(mqtt_port))
