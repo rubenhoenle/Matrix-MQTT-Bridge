@@ -1,7 +1,19 @@
-FROM python:3.9
+# FIRST STAGE: GO BUILD
+FROM golang:1.21.6 as build
 
-ADD matrix_mqtt_bridge.py .
+WORKDIR /app
 
-RUN pip3 install configparser paho-mqtt matrix-nio
+COPY go.mod go.sum ./
+RUN go mod download
 
-CMD ["python3", "-u", "./matrix_mqtt_bridge.py"] 
+COPY *.go ./
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o /matrix-bridge
+
+# SECOND AND FINAL STAGE
+FROM scratch
+
+COPY --from=build /matrix-bridge /matrix-bridge
+
+CMD ["/matrix-bridge"]
+
