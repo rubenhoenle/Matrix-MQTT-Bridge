@@ -51,6 +51,8 @@ You will need two Matrix accounts: The one you are using on e.g. your phone (I'm
 Is actually self-explanatory. Enter your Host (for me it's my HiveMQ cloud instance), the port and the credentials to connect to the MQTT message broker (username / password).     
 - The `topic_sub` is the MQTT topic the Matrix-MQTT-Bridge will **subscribe** to. All MQTT messages recieved on this topic will be sent into the Matrix chatroom by the bridge.
 - When the Matrix-MQTT-Bridge recieves a message via Matrix, it will publish this message to the MQTT broker using the topic specified in `topic_pub`.
+- Enable `allow_escaped_unicode` to allow support for escaped unicode characters like `\u00fc` for german umlaut ü in the MQTT messages
+- Enable `filter_duplicates` to filter subsequent duplicate messages in MQTT (only the first will be forwarded to Matrix)
 
 ```ini
 [MATRIX]
@@ -67,4 +69,6 @@ port = 8883
 tls = true
 topic_sub = mqttbridge/sub
 topic_pub = mqttbridge/pub
+allow_escaped_unicode = false
+filter_duplicates = false
 ```
