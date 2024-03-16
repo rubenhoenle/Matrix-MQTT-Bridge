@@ -2,6 +2,7 @@ import time
 import threading
 import asyncio
 import configparser 
+import re
 import nio
 import paho.mqtt.client as paho
 from paho import mqtt
@@ -92,10 +93,17 @@ def on_publish(client, userdata, mid, properties=None):
 def on_subscribe(client, userdata, mid, granted_qos, properties=None):
     print("[MQTT]", "Subscribed: " + str(mid) + " " + str(granted_qos))
 
+def unescapematch(match):
+    escapesequence = match.group(0)
+    digits = escapesequence[2:]
+    ordinal = int(digits, 16)
+    char = chr(ordinal)
+    return char
 
 # when a MQTT message is recieved
 def on_message(client, userdata, msg):
     message = msg.payload.decode("utf-8") 
+    message = re.sub(r'(\\u[0-9A-Fa-f]{2,4})', unescapematch, message)
     print("[MQTT]", msg.topic + " " + str(msg.qos) + " " + str(message))
 
     global matrix_client, event_loop
