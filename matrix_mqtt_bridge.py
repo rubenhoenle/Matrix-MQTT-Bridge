@@ -51,6 +51,28 @@ async def main() -> None:
         message_type="m.room.message",
         content={"msgtype": "m.text", "body": "[Matrix-MQTT-Bridge]: Ready"},
     )
+    
+    # using MQTT version 5 here, for 3.1.1: MQTTv311, 3.1: MQTTv31
+    # userdata is user defined data of any type, updated by user_data_set()
+    # client_id is the given name of the client
+    global mqtt_client
+    mqtt_client = paho.Client(client_id="Matrix-MQTT-Bridge", userdata=None, protocol=paho.MQTTv31)
+    mqtt_client.on_connect = on_connect
+    
+    # enable TLS for secure MQTT connection
+    if (mqtt_tls):
+        mqtt_client.tls_set(tls_version=mqtt.client.ssl.PROTOCOL_TLS)
+    
+    mqtt_client.username_pw_set(mqtt_user, mqtt_password)
+    mqtt_client.connect(mqtt_host, int(mqtt_port))
+    
+    # setting callbacks, use separate functions like above for better visibility
+    mqtt_client.on_subscribe = on_subscribe
+    mqtt_client.on_message = on_message
+    mqtt_client.on_publish = on_publish
+    
+    mqtt_client.loop_start()
+
     await matrix_client.sync_forever(timeout=30000)  # milliseconds
 
 
@@ -90,26 +112,5 @@ def on_message(client, userdata, msg):
     except nio.exceptions.LocalProtocolError:
         print("[MTRX]", f"Could not send message to {room_id}, ignoring.")
 
-# using MQTT version 5 here, for 3.1.1: MQTTv311, 3.1: MQTTv31
-# userdata is user defined data of any type, updated by user_data_set()
-# client_id is the given name of the client
-mqtt_client = paho.Client(client_id="Matrix-MQTT-Bridge", userdata=None, protocol=paho.MQTTv31)
-mqtt_client.on_connect = on_connect
-
-# enable TLS for secure MQTT connection
-if (mqtt_tls):
-    mqtt_client.tls_set(tls_version=mqtt.client.ssl.PROTOCOL_TLS)
-
-mqtt_client.username_pw_set(mqtt_user, mqtt_password)
-mqtt_client.connect(mqtt_host, int(mqtt_port))
-
-# setting callbacks, use separate functions like above for better visibility
-mqtt_client.on_subscribe = on_subscribe
-mqtt_client.on_message = on_message
-mqtt_client.on_publish = on_publish
-
-mqtt_client.loop_start()
-
-matrix_client = None
 event_loop = asyncio.new_event_loop()
 event_loop.run_until_complete(main())
