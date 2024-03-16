@@ -7,6 +7,9 @@ This project was created to create bridge between the Matrix Messenger and the M
 -----
 
 ## Setup
+Matrix-MQTT-Bridge can be run both via Docker or manually on the host as a systemd service
+
+### Via Docker
 You can run the Matrix-MQTT-Bridge via Docker, e.g. by using this `docker-compose.yaml` file. You will have to create a `config.ini` file to configure the connection to the MQTT broker and to the Matrix server. I'm using this project in combination with a **free private** [HiveMQ cloud instance](https://console.hivemq.cloud/), which acts as my MQTT broker.
 
 ```yaml
@@ -20,6 +23,20 @@ services:
     volumes:
       - ./config.ini:/config.ini
 ```
+
+### Via Systemd
+This repository includes an [example systemd unit file](matrix-mqtt-bridge.service) that allows to run the Matrix-MQTT-Bridge as a systemd service directly on the host. To use the systemd unit file, follow these steps:
+
+1. Clone the repository to `/opt/Matrix-MQTT-Bridge/`
+2. Install the `nio` and `paho` Python packages, e.g. using `pip` or your system package manager
+3. Copy the [`config.ini.example`](config.ini.example) to `config.ini` and fill in your configuration
+4. Copy the [`matrix-mqtt-bridge.service`](matrix-mqtt-bridge.service) to `/etc/systemd/system/`
+5. Create an unprivileged user `mqtt-bridge` (or edit the username in the [`matrix-mqtt-bridge.service`](matrix-mqtt-bridge.service))
+6. Optionally use `chown -R mqtt-bridge:mqtt-bridge /opt/Matrix-MQTT-Bridge` and `chmod 600 /opt/Matrix-MQTT-Bridge/config.ini` to protect your configuration from reading by other users
+7. Run `systemd daemon-reload` as root to add the new unit file to its index
+8. Run `systemctl enable --now matrix-mqtt-bridge` as root to start the bridge now and on each reboot
+9. Use `systemctl status matrix-mqtt-bridge` or `journalctl -eu matrix-mqtt-bridge` to view the log output of the bridge
+
 -----
 
 ## Config file
