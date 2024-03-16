@@ -1,0 +1,11 @@
+[Unit]
+Description=A simple Matrix MQTT bridge
+After=network.target
+
+[Service]
+User=mqtt-bridge
+WorkingDirectory=/opt/Matrix-MQTT-Bridge/
+ExecStart=/usr/bin/python /opt/Matrix-MQTT-Bridge/matrix_mqtt_bridge.py
+
+[Install]
+WantedBy=multi-user.target
