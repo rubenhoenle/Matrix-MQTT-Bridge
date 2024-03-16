@@ -30,6 +30,7 @@ mqtt_port = config.get("MQTT", "port")
 mqtt_tls = config.getboolean("MQTT", "tls")
 mqtt_topic_sub = config.get("MQTT", "topic_sub")
 mqtt_topic_pub = config.get("MQTT", "topic_pub")
+allow_escaped_unicode = config.get("MQTT", "allow_escaped_unicode")
 
 async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
     if room.room_id == matrix_room_id and event.sender != matrix_user and (int(time.time() * 1000) - event.server_timestamp) <= 30 * 1000:
@@ -103,7 +104,8 @@ def unescapematch(match):
 # when a MQTT message is recieved
 def on_message(client, userdata, msg):
     message = msg.payload.decode("utf-8") 
-    message = re.sub(r'(\\u[0-9A-Fa-f]{2,4})', unescapematch, message)
+    if allow_escaped_unicode:
+        message = re.sub(r'(\\u[0-9A-Fa-f]{2,4})', unescapematch, message)
     print("[MQTT]", msg.topic + " " + str(msg.qos) + " " + str(message))
 
     global matrix_client, event_loop

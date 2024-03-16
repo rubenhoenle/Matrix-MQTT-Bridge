@@ -12,3 +12,4 @@ port = 8883
 tls = true
 topic_sub = mqttbridge/sub
 topic_pub = mqttbridge/pub
+allow_escaped_unicode = false
