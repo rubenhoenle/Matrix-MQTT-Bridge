@@ -13,3 +13,4 @@ tls = true
 topic_sub = mqttbridge/sub
 topic_pub = mqttbridge/pub
 allow_escaped_unicode = false
+filter_duplicates = false

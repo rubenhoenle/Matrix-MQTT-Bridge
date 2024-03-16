@@ -31,6 +31,9 @@ mqtt_tls = config.getboolean("MQTT", "tls")
 mqtt_topic_sub = config.get("MQTT", "topic_sub")
 mqtt_topic_pub = config.get("MQTT", "topic_pub")
 allow_escaped_unicode = config.get("MQTT", "allow_escaped_unicode")
+filter_duplicates = config.get("MQTT", "filter_duplicates")
+
+last_message = ""
 
 async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
     if room.room_id == matrix_room_id and event.sender != matrix_user and (int(time.time() * 1000) - event.server_timestamp) <= 30 * 1000:
@@ -103,24 +106,29 @@ def unescapematch(match):
 
 # when a MQTT message is recieved
 def on_message(client, userdata, msg):
+    global last_message
     message = msg.payload.decode("utf-8") 
     if allow_escaped_unicode:
         message = re.sub(r'(\\u[0-9A-Fa-f]{2,4})', unescapematch, message)
-    print("[MQTT]", msg.topic + " " + str(msg.qos) + " " + str(message))
-
-    global matrix_client, event_loop
-    try:
-        send_fut = asyncio.run_coroutine_threadsafe(
-            matrix_client.room_send(
-                room_id=matrix_room_id,
-                message_type="m.room.message",
-                content={"msgtype": "m.text", "body": message},
-            ),
-            event_loop,
-        )
-        send_fut.result()
-    except nio.exceptions.LocalProtocolError:
-        print("[MTRX]", f"Could not send message to {room_id}, ignoring.")
+    if not filter_duplicates or message != last_message:
+        last_message = message
+        print("[MQTT]", msg.topic + " " + str(msg.qos) + " " + str(message))
+        
+        global matrix_client, event_loop
+        try:
+            send_fut = asyncio.run_coroutine_threadsafe(
+                matrix_client.room_send(
+                    room_id=matrix_room_id,
+                    message_type="m.room.message",
+                    content={"msgtype": "m.text", "body": message},
+                ),
+                event_loop,
+            )
+            send_fut.result()
+        except nio.exceptions.LocalProtocolError:
+            print("[MTRX]", f"Could not send message to {room_id}, ignoring.")
+    else:
+        print(f"[MQTT] duplicate: {msg.topic} {msg.qos} {message}")
 
 event_loop = asyncio.new_event_loop()
 event_loop.run_until_complete(main())
