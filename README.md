@@ -1,3 +1,5 @@
+[![CI/CD](https://github.com/rubenhoenle/Matrix-MQTT-Bridge/actions/workflows/build.yml/badge.svg)](https://github.com/rubenhoenle/Matrix-MQTT-Bridge/actions/workflows/build.yml)
+
 # Matrix-MQTT-Bridge
 
 This project was created to create bridge between the Matrix Messenger and the MQTT protocol. I'm using this to control a microcontroller / Raspberry Pi Pico over a Matrix chat. Using this project the microcontroller is able to recieve the messages posted into the Matrix chat (like in the graphic). MQTT Messages which get published by the microcontroller get also forwarded into the Matrix chat by the Matrix-MQTT-Bridge.
