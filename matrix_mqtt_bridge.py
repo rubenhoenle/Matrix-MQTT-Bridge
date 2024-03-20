@@ -61,7 +61,7 @@ async def main() -> None:
     # userdata is user defined data of any type, updated by user_data_set()
     # client_id is the given name of the client
     global mqtt_client
-    mqtt_client = paho.Client(client_id="Matrix-MQTT-Bridge", userdata=None, protocol=paho.MQTTv31)
+    mqtt_client = paho.Client(callback_api_version=paho.CallbackAPIVersion.VERSION1, client_id="Matrix-MQTT-Bridge", userdata=None, protocol=paho.MQTTv31)
     mqtt_client.on_connect = on_connect
     
     # enable TLS for secure MQTT connection
@@ -108,9 +108,9 @@ def unescapematch(match):
 def on_message(client, userdata, msg):
     global last_message
     message = msg.payload.decode("utf-8") 
-    if allow_escaped_unicode:
+    if mqtt_allow_escaped_unicode:
         message = re.sub(r'(\\u[0-9A-Fa-f]{2,4})', unescapematch, message)
-    if not filter_duplicates or message != last_message:
+    if not mqtt_filter_duplicates or message != last_message:
         last_message = message
         print("[MQTT]", msg.topic + " " + str(msg.qos) + " " + str(message))
         
