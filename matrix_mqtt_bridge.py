@@ -17,21 +17,21 @@ config = configparser.ConfigParser(interpolation=None)
 config.read("config.ini")
 
 # get matrix settings
-matrix_homeserver = config.get("MATRIX", "homeserver")
-matrix_user = config.get("MATRIX", "user")
-matrix_password = config.get("MATRIX", "password")
-matrix_room_id = config.get("MATRIX", "room_id")
+matrix_homeserver = config["MATRIX"].get("homeserver")
+matrix_user = config["MATRIX"].get("user")
+matrix_password = config["MATRIX"].get("password")
+matrix_room_id = config["MATRIX"].get("room_id")
 
 # get mqtt settings
-mqtt_host = config.get("MQTT", "host")
-mqtt_user = config.get("MQTT", "user")
-mqtt_password = config.get("MQTT", "password")
-mqtt_port = config.get("MQTT", "port")
+mqtt_host = config["MQTT"].get("host")
+mqtt_user = config["MQTT"].get("user")
+mqtt_password = config["MQTT"].get("password")
+mqtt_port = config["MQTT"].get("port")
 mqtt_tls = config.getboolean("MQTT", "tls")
-mqtt_topic_sub = config.get("MQTT", "topic_sub")
-mqtt_topic_pub = config.get("MQTT", "topic_pub")
-mqtt_allow_escaped_unicode = config.get("MQTT", "allow_escaped_unicode")
-mqtt_filter_duplicates = config.get("MQTT", "filter_duplicates")
+mqtt_topic_sub = config["MQTT"].get("topic_sub")
+mqtt_topic_pub = config["MQTT"].get("topic_pub")
+mqtt_allow_escaped_unicode = config["MQTT"].get("allow_escaped_unicode", False)
+mqtt_filter_duplicates = config["MQTT"].get("filter_duplicates", False)
 
 last_message = ""
 
