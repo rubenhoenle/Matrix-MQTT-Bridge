@@ -9,6 +9,9 @@ This project was created to create bridge between the Matrix Messenger and the M
 -----
 
 ## Setup
+Matrix-MQTT-Bridge can be run both via Docker or manually on the host as a systemd service
+
+### Via Docker
 You can run the Matrix-MQTT-Bridge via Docker, e.g. by using this `docker-compose.yaml` file. You will have to create a `config.ini` file to configure the connection to the MQTT broker and to the Matrix server. I'm using this project in combination with a **free private** [HiveMQ cloud instance](https://console.hivemq.cloud/), which acts as my MQTT broker.
 
 ```yaml
@@ -22,6 +25,20 @@ services:
     volumes:
       - ./config.ini:/config.ini
 ```
+
+### Via Systemd
+This repository includes an [example systemd unit file](matrix-mqtt-bridge.service) that allows to run the Matrix-MQTT-Bridge as a systemd service directly on the host. To use the systemd unit file, follow these steps:
+
+1. Clone the repository to `/opt/Matrix-MQTT-Bridge/`
+2. Install the `nio` and `paho` Python packages, e.g. using `pip` or your system package manager
+3. Copy the [`config.ini.example`](config.ini.example) to `config.ini` and fill in your configuration
+4. Copy the [`matrix-mqtt-bridge.service`](matrix-mqtt-bridge.service) to `/etc/systemd/system/`
+5. Create an unprivileged user `mqtt-bridge` (or edit the username in the [`matrix-mqtt-bridge.service`](matrix-mqtt-bridge.service))
+6. Optionally use `chown -R mqtt-bridge:mqtt-bridge /opt/Matrix-MQTT-Bridge` and `chmod 600 /opt/Matrix-MQTT-Bridge/config.ini` to protect your configuration from reading by other users
+7. Run `systemd daemon-reload` as root to add the new unit file to its index
+8. Run `systemctl enable --now matrix-mqtt-bridge` as root to start the bridge now and on each reboot
+9. Use `systemctl status matrix-mqtt-bridge` or `journalctl -eu matrix-mqtt-bridge` to view the log output of the bridge
+
 -----
 
 ## Config file
@@ -36,6 +53,9 @@ You will need two Matrix accounts: The one you are using on e.g. your phone (I'm
 Is actually self-explanatory. Enter your Host (for me it's my HiveMQ cloud instance), the port and the credentials to connect to the MQTT message broker (username / password).     
 - The `topic_sub` is the MQTT topic the Matrix-MQTT-Bridge will **subscribe** to. All MQTT messages recieved on this topic will be sent into the Matrix chatroom by the bridge.
 - When the Matrix-MQTT-Bridge recieves a message via Matrix, it will publish this message to the MQTT broker using the topic specified in `topic_pub`.
+- Enable `allow_escaped_unicode` to allow support for escaped unicode characters like `\u00fc` for german umlaut ü in the MQTT messages
+- Enable `filter_duplicates` to filter subsequent duplicate messages in MQTT (only the first will be forwarded to Matrix)
+- Specify search and replace patterns by adding as many sections starting with `MQTT.replace.` as needed, each section containing a single search pattern and replacement regex
 
 ```ini
 [MATRIX]
@@ -52,4 +72,16 @@ port = 8883
 tls = true
 topic_sub = mqttbridge/sub
 topic_pub = mqttbridge/pub
+allow_escaped_unicode = false
+filter_duplicates = false
+
+[MQTT.replace.remove_quotation_marks]
+# Remove all double quotation marks in message text before forwarding MQTT messages
+pattern = "
+substitution = 
+
+[MQTT.replace.charging_cant_start]
+# Prepend all messages containing "Cannot start charging" with a yellow warning sign emoji
+pattern = ^(.*Cannot start charging.*)
+substitution = ⚠️ \1
 ```

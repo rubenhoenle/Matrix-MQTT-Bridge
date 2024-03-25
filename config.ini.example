@@ -12,3 +12,15 @@ port = 8883
 tls = true
 topic_sub = mqttbridge/sub
 topic_pub = mqttbridge/pub
+allow_escaped_unicode = false
+filter_duplicates = false
+
+[MQTT.replace.remove_quotation_marks]
+# Remove all double quotation marks in message text before forwarding MQTT messages
+pattern = "
+substitution = 
+
+[MQTT.replace.charging_cant_start]
+# Prepend all messages containing "Cannot start charging" with a yellow warning sign emoji
+pattern = ^(.*Cannot start charging.*)
+substitution = ⚠️ \1
