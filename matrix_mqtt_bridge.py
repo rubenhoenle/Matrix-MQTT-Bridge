@@ -30,8 +30,8 @@ mqtt_port = config.get("MQTT", "port")
 mqtt_tls = config.getboolean("MQTT", "tls")
 mqtt_topic_sub = config.get("MQTT", "topic_sub")
 mqtt_topic_pub = config.get("MQTT", "topic_pub")
-allow_escaped_unicode = config.get("MQTT", "allow_escaped_unicode")
-filter_duplicates = config.get("MQTT", "filter_duplicates")
+mqtt_allow_escaped_unicode = config.get("MQTT", "allow_escaped_unicode")
+mqtt_filter_duplicates = config.get("MQTT", "filter_duplicates")
 
 last_message = ""
 
