@@ -1,6 +1,10 @@
 config.ini
 basics
 
+# matrix-commander cli stuff
+store/
+credentials.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

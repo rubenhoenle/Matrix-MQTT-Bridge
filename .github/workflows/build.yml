@@ -2,10 +2,14 @@ name: CI/CD
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "feat/ci-pipeline" ]
     tags: ['v*']
   pull_request:
     branches: [ "main" ]
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
@@ -13,7 +17,10 @@ env:
 
 jobs:
   build:
+    name: Build
     runs-on: ubuntu-latest
+    outputs:
+      imageid: ${{ steps.build-docker-image.outputs.imageid }}
 
     steps:
       - name: Checkout repository
@@ -33,18 +40,110 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract Docker metadata
+      - name: Extract docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-      - name: Build and push Docker image
+      - name: Build docker image
+        id: build-docker-image
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
+          #platforms: linux/amd64,linux/arm64,linux/arm/v7
+          #push: ${{ github.event_name != 'pull_request' }}
+          push: false
+          #tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ env.REGISTRY }}/rubenhoenle/matrix-mqtt-bridge:ci-cd
           labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=docker,dest=/tmp/image.tar
+      
+      - name: Upload docker image as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dockerimage
+          path: /tmp/image.tar
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: [ build ]
+
+    strategy:
+      max-parallel: 1
+      matrix:
+        include:
+          # MQTT, unencrypted, authenticated
+          - mqtt.host: test.mosquitto.org
+            mqtt.port: 1884
+            mqtt.user: rw
+            mqtt.password: readwrite
+            mqtt.tls: false
+            mqtt.topics.bridge-input: mqttbridge/sub
+            mqtt.topics.bridge-output: mqttbridge/pub 
+
+    steps:
+      - name: Download dockerimage from build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dockerimage
+          path: /tmp
+      
+      - name: Load dockerimage
+        run: |
+          docker load --input /tmp/image.tar
+          docker image ls -a 
+
+      - name: Install matrix cli
+        run: pip3 install matrix-commander
+
+      - name: Login with matrix cli
+        run: | 
+          matrix-commander --login password \
+            --user-login "${{ secrets.MATRIX_USERNAME_CLIENT }}" \
+            --password "${{ secrets.MATRIX_PASSWORD_CLIENT }}" \
+            --homeserver "${{ secrets.MATRIX_HOMESERVER }}" \
+            --device "Matrix-MQTT-Bridge-CI-CD-Client" \
+            --room-default "${{ secrets.MATRIX_ROOMID }}"
+
+      - name: Create config.ini file
+        run: |
+          echo "[MATRIX]"                                             > ${{ env.FILENAME }}
+          echo "homeserver = ${{ secrets.MATRIX_HOMESERVER }}"        >> ${{ env.FILENAME }}
+          echo "user = ${{ secrets.MATRIX_USERNAME_BRIDGE }}"         >> ${{ env.FILENAME }}
+          echo "password = ${{ secrets.MATRIX_PASSWORD_BRIDGE }}"     >> ${{ env.FILENAME }}
+          echo "room_id = ${{ secrets.MATRIX_ROOMID }}"               >> ${{ env.FILENAME }}
+          echo ""                                                     >> ${{ env.FILENAME }}
+          echo "[MQTT]"                                               >> ${{ env.FILENAME }}
+          echo "host = ${{ matrix.mqtt.host }}"                       >> ${{ env.FILENAME }}
+          echo "user = ${{ matrix.mqtt.user }}"                       >> ${{ env.FILENAME }}
+          echo "password = ${{ matrix.mqtt.password }}"               >> ${{ env.FILENAME }}
+          echo "port = ${{ matrix.mqtt.port }}"                       >> ${{ env.FILENAME }}
+          echo "tls = ${{ matrix.mqtt.tls }}"                         >> ${{ env.FILENAME }}
+          echo "topic_sub = ${{ matrix.mqtt.topics.bridge-input }}"   >> ${{ env.FILENAME }}
+          echo "topic_pub = ${{ matrix.mqtt.topics.brige-output }}"   >> ${{ env.FILENAME }}
+        env:
+          FILENAME: config.ini
+
+      - name: Start Matrix-MQTT-Bridge docker container
+        run: docker run -d -v ./config.ini:/config.ini ${{ needs.build.outputs.imageid }}
+
+  push:
+    name: Push docker image
+    runs-on: ubuntu-latest
+    needs: [ test ]
+    
+    steps:
+      - name: Download dockerimage from build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dockerimage
+          path: /tmp
+      
+      - name: Load dockerimage
+        run: |
+          docker load --input /tmp/image.tar
+          docker image ls -a 
+
 
