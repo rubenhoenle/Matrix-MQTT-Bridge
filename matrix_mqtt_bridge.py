@@ -110,6 +110,15 @@ def on_message(client, userdata, msg):
     message = msg.payload.decode("utf-8") 
     if mqtt_allow_escaped_unicode:
         message = re.sub(r'(\\u[0-9A-Fa-f]{2,4})', unescapematch, message)
+    
+    for section in config.sections():
+        if section.startswith("MQTT.replace."):
+            replace_definition = config[section]
+            pattern = replace_definition.get("pattern", None)
+            substitution = replace_definition.get("substitution", None)
+            if pattern != None and substitution != None:
+                message = re.sub(pattern, substitution, message)
+    
     if not mqtt_filter_duplicates or message != last_message:
         last_message = message
         print("[MQTT]", msg.topic + " " + str(msg.qos) + " " + str(message))

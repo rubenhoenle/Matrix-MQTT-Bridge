@@ -53,6 +53,7 @@ Is actually self-explanatory. Enter your Host (for me it's my HiveMQ cloud insta
 - When the Matrix-MQTT-Bridge recieves a message via Matrix, it will publish this message to the MQTT broker using the topic specified in `topic_pub`.
 - Enable `allow_escaped_unicode` to allow support for escaped unicode characters like `\u00fc` for german umlaut ü in the MQTT messages
 - Enable `filter_duplicates` to filter subsequent duplicate messages in MQTT (only the first will be forwarded to Matrix)
+- Specify search and replace patterns by adding as many sections starting with `MQTT.replace.` as needed, each section containing a single search pattern and replacement regex
 
 ```ini
 [MATRIX]
@@ -71,4 +72,14 @@ topic_sub = mqttbridge/sub
 topic_pub = mqttbridge/pub
 allow_escaped_unicode = false
 filter_duplicates = false
+
+[MQTT.replace.remove_quotation_marks]
+# Remove all double quotation marks in message text before forwarding MQTT messages
+pattern = "
+substitution = 
+
+[MQTT.replace.charging_cant_start]
+# Prepend all messages containing "Cannot start charging" with a yellow warning sign emoji
+pattern = ^(.*Cannot start charging.*)
+substitution = ⚠️ \1
 ```
