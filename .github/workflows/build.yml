@@ -129,6 +129,12 @@ jobs:
       - name: Start Matrix-MQTT-Bridge docker container
         run: docker run -d -v ./config.ini:/config.ini ${{ needs.build.outputs.imageid }}
 
+      - name: Send matrix message
+        run: matrix-commander -m "YOUR_MSG_HERE"
+
+      - name: Listen to matrix messages
+        run: matrix-commander --listen
+
   push:
     name: Push docker image
     runs-on: ubuntu-latest
