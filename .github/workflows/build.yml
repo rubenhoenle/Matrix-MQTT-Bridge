@@ -75,15 +75,26 @@ jobs:
       matrix:
         include:
           # MQTT, unencrypted, authenticated
-          - mqtt.host: test.mosquitto.org
-            mqtt.port: 1884
-            mqtt.user: rw
-            mqtt.password: readwrite
-            mqtt.tls: false
-            mqtt.topics.bridge-input: mqttbridge/sub
-            mqtt.topics.bridge-output: mqttbridge/pub 
+          - mqtt_host: test.mosquitto.org
+            mqtt_port: 1884
+            mqtt_user: rw
+            mqtt_password: readwrite
+            mqtt_tls: false
+            mqtt_topics_bridge-input: mqttbridge/sub
+            mqtt_topics_bridge-output: mqttbridge/pub 
+          # MQTT, encrypted, authenticated
+          - mqtt_host: broker.hivemq.com
+            mqtt_port: 8883
+            mqtt_user: rw
+            mqtt_password: readwrite
+            mqtt_tls: true
+            mqtt_topics_bridge-input: mqttbridge/sub
+            mqtt_topics_bridge-output: mqttbridge/pub 
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
       - name: Download dockerimage from build artifacts
         uses: actions/download-artifact@v4
         with:
@@ -95,17 +106,8 @@ jobs:
           docker load --input /tmp/image.tar
           docker image ls -a 
 
-      - name: Install matrix cli
-        run: pip3 install matrix-commander
-
-      - name: Login with matrix cli
-        run: | 
-          matrix-commander --login password \
-            --user-login "${{ secrets.MATRIX_USERNAME_CLIENT }}" \
-            --password "${{ secrets.MATRIX_PASSWORD_CLIENT }}" \
-            --homeserver "${{ secrets.MATRIX_HOMESERVER }}" \
-            --device "Matrix-MQTT-Bridge-CI-CD-Client" \
-            --room-default "${{ secrets.MATRIX_ROOMID }}"
+      - name: Install nix
+        uses: cachix/install-nix-action@v26
 
       - name: Create config.ini file
         run: |
@@ -116,24 +118,44 @@ jobs:
           echo "room_id = ${{ secrets.MATRIX_ROOMID }}"               >> ${{ env.FILENAME }}
           echo ""                                                     >> ${{ env.FILENAME }}
           echo "[MQTT]"                                               >> ${{ env.FILENAME }}
-          echo "host = ${{ matrix.mqtt.host }}"                       >> ${{ env.FILENAME }}
-          echo "user = ${{ matrix.mqtt.user }}"                       >> ${{ env.FILENAME }}
-          echo "password = ${{ matrix.mqtt.password }}"               >> ${{ env.FILENAME }}
-          echo "port = ${{ matrix.mqtt.port }}"                       >> ${{ env.FILENAME }}
-          echo "tls = ${{ matrix.mqtt.tls }}"                         >> ${{ env.FILENAME }}
-          echo "topic_sub = ${{ matrix.mqtt.topics.bridge-input }}"   >> ${{ env.FILENAME }}
-          echo "topic_pub = ${{ matrix.mqtt.topics.brige-output }}"   >> ${{ env.FILENAME }}
+          echo "host = ${{ matrix.mqtt_host }}"                       >> ${{ env.FILENAME }}
+          echo "user = ${{ matrix.mqtt_user }}"                       >> ${{ env.FILENAME }}
+          echo "password = ${{ matrix.mqtt_password }}"               >> ${{ env.FILENAME }}
+          echo "port = ${{ matrix.mqtt_port }}"                       >> ${{ env.FILENAME }}
+          echo "tls = ${{ matrix.mqtt_tls }}"                         >> ${{ env.FILENAME }}
+          echo "topic_sub = ${{ matrix.mqtt_topics_bridge-input }}"   >> ${{ env.FILENAME }}
+          echo "topic_pub = ${{ matrix.mqtt_topics_bridge-output }}"  >> ${{ env.FILENAME }}
         env:
           FILENAME: config.ini
 
       - name: Start Matrix-MQTT-Bridge docker container
-        run: docker run -d -v ./config.ini:/config.ini ${{ needs.build.outputs.imageid }}
+        run: docker run -d --name matrix-mqtt-bridge -v ./config.ini:/config.ini ${{ needs.build.outputs.imageid }}
+      
+      - name: Create env file
+        run: |
+          echo "# matrix settings"                                              > ${{ env.FILENAME }}
+          echo "MATRIX_HOMESERVER=${{ secrets.MATRIX_HOMESERVER }}"             >> ${{ env.FILENAME }}
+          echo "MATRIX_CLIENT_USERNAME=${{ secrets.MATRIX_USERNAME_CLIENT }}"   >> ${{ env.FILENAME }}
+          echo "MATRIX_CLIENT_PASSWORD=${{ secrets.MATRIX_PASSWORD_CLIENT }}"   >> ${{ env.FILENAME }}
+          echo "MATRIX_ROOMID=\"${{ secrets.MATRIX_ROOMID }}\""                 >> ${{ env.FILENAME }}
+          echo ""                                                               >> ${{ env.FILENAME }}
+          echo "# MQTT settings"                                                >> ${{ env.FILENAME }}
+          echo "MQTT_HOST=${{ matrix.mqtt_host }}"                              >> ${{ env.FILENAME }}
+          echo "MQTT_USERNAME=${{ matrix.mqtt_user }}"                          >> ${{ env.FILENAME }}
+          echo "MQTT_PASSWORD=${{ matrix.mqtt_password }}"                      >> ${{ env.FILENAME }}
+          echo "MQTT_PORT=${{ matrix.mqtt_port }}"                              >> ${{ env.FILENAME }}
+          echo "MQTT_TLS=${{ matrix.mqtt_tls }}"                                >> ${{ env.FILENAME }}
+          echo "MQTT_TOPIC_TO_BRIDGE=${{ matrix.mqtt_topics_bridge-input }}"    >> ${{ env.FILENAME }}
+          echo "MQTT_TOPIC_FROM_BRIDGE=${{ matrix.mqtt_topics_bridge-output }}" >> ${{ env.FILENAME }}
+        env:
+          FILENAME: tests/.env
 
-      - name: Send matrix message
-        run: matrix-commander -m "YOUR_MSG_HERE"
-
-      - name: Listen to matrix messages
-        run: matrix-commander --listen
+      - name: Run tests
+        run: nix develop --command python3 tests/main.py
+      
+      - name: Print container logs on error
+        if: ${{ failure() }}
+        run: docker logs matrix-mqtt-bridge
 
   push:
     name: Push docker image

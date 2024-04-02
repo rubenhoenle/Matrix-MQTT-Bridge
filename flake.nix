@@ -27,6 +27,7 @@
           python311Packages.paho-mqtt
           python311Packages.matrix-nio
           python311Packages.configparser
+          python311Packages.python-dotenv
         ];
       };
 
