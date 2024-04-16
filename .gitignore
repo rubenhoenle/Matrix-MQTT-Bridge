@@ -1,6 +1,7 @@
 config.ini
 basics
 test/.env
+result
 
 # matrix-commander cli stuff
 store/

@@ -16,6 +16,28 @@
         inherit system;
       };
       treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
+
+      python-script = pkgs.python311Packages.buildPythonApplication {
+        pname = "matrix-mqtt-bridge";
+        version = "0.1";
+        doCheck = false;
+        src = ./.;
+        propagatedBuildInputs = with pkgs; [
+          python311Packages.paho-mqtt
+          python311Packages.matrix-nio
+          python311Packages.configparser
+        ];
+      };
+
+      containerImage = pkgs.dockerTools.buildLayeredImage {
+        name = "matrix-mqtt-bridge";
+        tag = "latest";
+        contents = with pkgs; [ cacert coreutils bashInteractive iputils curl ];
+        config = {
+          Entrypoint = [ "${python-script}/bin/matrix_mqtt_bridge.py" ];
+          Env = [ "SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt" "PYTHONUNBUFFERED=1" ];
+        };
+      };
     in
     {
       formatter.${system} = treefmtEval.config.build.wrapper;
@@ -31,5 +53,11 @@
         ];
       };
 
+      packages.${system} = {
+        default = pkgs.writeShellScriptBin "matrix-mqtt-bridge" ''
+          ${python-script}/bin/matrix_mqtt_bridge.py "''${@:1}"
+        '';
+        containerImage = containerImage;
+      };
     };
 }

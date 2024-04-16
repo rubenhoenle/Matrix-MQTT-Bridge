@@ -2,11 +2,7 @@ version: "3.9"
 
 services:
   matrix-mqtt-bridge:
-    image: ghcr.io/rubenhoenle/matrix-mqtt-bridge:latest
-    build:
-      context: ./
-      dockerfile: Dockerfile
+    image: matrix-mqtt-bridge:latest
     container_name: matrix-mqtt-bridge
-    restart: always
     volumes:
       - ./config.ini:/config.ini
