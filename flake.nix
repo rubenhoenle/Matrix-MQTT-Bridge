@@ -30,8 +30,8 @@
       };
 
       containerImage = pkgs.dockerTools.buildLayeredImage {
-        name = "matrix-mqtt-bridge";
-        tag = "latest";
+        name = "ghcr.io/rubenhoenle/matrix-mqtt-bridge";
+        tag = "unstable";
         contents = with pkgs; [ cacert coreutils bashInteractive iputils curl ];
         config = {
           Entrypoint = [ "${python-script}/bin/matrix_mqtt_bridge.py" ];

@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   matrix-mqtt-bridge:
-    image: matrix-mqtt-bridge:latest
+    image: ghcr.io/rubenhoenle/matrix-mqtt-bridge:unstable
     container_name: matrix-mqtt-bridge
     volumes:
       - ./config.ini:/config.ini
