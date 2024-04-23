@@ -34,6 +34,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       max-parallel: 1
       matrix:
         include:
@@ -88,7 +89,10 @@ jobs:
 
       - name: Start Matrix-MQTT-Bridge docker container
         run: docker run -d --name matrix-mqtt-bridge -v ./config.ini:/config.ini matrix-mqtt-bridge:latest
-      
+     
+      - name: Wait for matrix bridge container to boot up
+        run: sleep 15s
+
       - name: Create env file
         run: |
           echo "# matrix settings"                                              > ${{ env.FILENAME }}
@@ -121,6 +125,9 @@ jobs:
     needs: [ test ]
     
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Install nix
         uses: cachix/install-nix-action@v26
 

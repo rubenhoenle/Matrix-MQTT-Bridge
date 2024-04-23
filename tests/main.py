@@ -82,7 +82,7 @@ class TestMQTTMatrixIntegration(unittest.TestCase):
     
     async def matrix_sync(self, loop):
         try:
-            await asyncio.wait_for(self.matrix_client.sync_forever(timeout=30000), timeout=3)
+            await asyncio.wait_for(self.matrix_client.sync_forever(timeout=30000), timeout=10)
         except asyncio.TimeoutError:
             # Timeout error is expected, nothing to care about
             pass
