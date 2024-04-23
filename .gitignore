@@ -1,5 +1,11 @@
 config.ini
 basics
+test/.env
+result
+
+# matrix-commander cli stuff
+store/
+credentials.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

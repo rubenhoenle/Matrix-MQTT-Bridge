@@ -7,44 +7,146 @@ on:
   pull_request:
     branches: [ "main" ]
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: ghcr.io/rubenhoenle/matrix-mqtt-bridge
+  IMAGE_TAG: unstable
 
 jobs:
-  build:
+  codeformat:
+    name: Code format check
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install nix
+        uses: cachix/install-nix-action@v26
+
+      - name: Check code format
+        run: nix flake check
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          # MQTT, unencrypted, authenticated
+          - mqtt_host: test.mosquitto.org
+            mqtt_port: 1884
+            mqtt_user: rw
+            mqtt_password: readwrite
+            mqtt_tls: false
+            mqtt_topics_bridge-input: mqttbridge/sub
+            mqtt_topics_bridge-output: mqttbridge/pub 
+          # MQTT, encrypted, authenticated
+          - mqtt_host: broker.hivemq.com
+            mqtt_port: 8883
+            mqtt_user: rw
+            mqtt_password: readwrite
+            mqtt_tls: true
+            mqtt_topics_bridge-input: mqttbridge/sub
+            mqtt_topics_bridge-output: mqttbridge/pub 
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - name: Install nix
+        uses: cachix/install-nix-action@v26
 
-      - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Build container image
+        run: nix build .#containerImage
 
-      - name: Log into registry ${{ env.REGISTRY }}
-        if: ${{ github.event_name != 'pull_request' }}
+      - name: Load containerimage into docker
+        run: docker load < result
+
+      - name: Create config.ini file
+        run: |
+          echo "[MATRIX]"                                             > ${{ env.FILENAME }}
+          echo "homeserver = ${{ secrets.MATRIX_HOMESERVER }}"        >> ${{ env.FILENAME }}
+          echo "user = ${{ secrets.MATRIX_USERNAME_BRIDGE }}"         >> ${{ env.FILENAME }}
+          echo "password = ${{ secrets.MATRIX_PASSWORD_BRIDGE }}"     >> ${{ env.FILENAME }}
+          echo "room_id = ${{ secrets.MATRIX_ROOMID }}"               >> ${{ env.FILENAME }}
+          echo ""                                                     >> ${{ env.FILENAME }}
+          echo "[MQTT]"                                               >> ${{ env.FILENAME }}
+          echo "host = ${{ matrix.mqtt_host }}"                       >> ${{ env.FILENAME }}
+          echo "user = ${{ matrix.mqtt_user }}"                       >> ${{ env.FILENAME }}
+          echo "password = ${{ matrix.mqtt_password }}"               >> ${{ env.FILENAME }}
+          echo "port = ${{ matrix.mqtt_port }}"                       >> ${{ env.FILENAME }}
+          echo "tls = ${{ matrix.mqtt_tls }}"                         >> ${{ env.FILENAME }}
+          echo "topic_sub = ${{ matrix.mqtt_topics_bridge-input }}"   >> ${{ env.FILENAME }}
+          echo "topic_pub = ${{ matrix.mqtt_topics_bridge-output }}"  >> ${{ env.FILENAME }}
+        env:
+          FILENAME: config.ini
+
+      - name: Start Matrix-MQTT-Bridge docker container
+        run: docker run -d --name matrix-mqtt-bridge -v ./config.ini:/config.ini ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+     
+      - name: Wait for matrix bridge container to boot up
+        run: sleep 15s
+
+      - name: Create env file
+        run: |
+          echo "# matrix settings"                                              > ${{ env.FILENAME }}
+          echo "MATRIX_HOMESERVER=${{ secrets.MATRIX_HOMESERVER }}"             >> ${{ env.FILENAME }}
+          echo "MATRIX_CLIENT_USERNAME=${{ secrets.MATRIX_USERNAME_CLIENT }}"   >> ${{ env.FILENAME }}
+          echo "MATRIX_CLIENT_PASSWORD=${{ secrets.MATRIX_PASSWORD_CLIENT }}"   >> ${{ env.FILENAME }}
+          echo "MATRIX_ROOMID=\"${{ secrets.MATRIX_ROOMID }}\""                 >> ${{ env.FILENAME }}
+          echo ""                                                               >> ${{ env.FILENAME }}
+          echo "# MQTT settings"                                                >> ${{ env.FILENAME }}
+          echo "MQTT_HOST=${{ matrix.mqtt_host }}"                              >> ${{ env.FILENAME }}
+          echo "MQTT_USERNAME=${{ matrix.mqtt_user }}"                          >> ${{ env.FILENAME }}
+          echo "MQTT_PASSWORD=${{ matrix.mqtt_password }}"                      >> ${{ env.FILENAME }}
+          echo "MQTT_PORT=${{ matrix.mqtt_port }}"                              >> ${{ env.FILENAME }}
+          echo "MQTT_TLS=${{ matrix.mqtt_tls }}"                                >> ${{ env.FILENAME }}
+          echo "MQTT_TOPIC_TO_BRIDGE=${{ matrix.mqtt_topics_bridge-input }}"    >> ${{ env.FILENAME }}
+          echo "MQTT_TOPIC_FROM_BRIDGE=${{ matrix.mqtt_topics_bridge-output }}" >> ${{ env.FILENAME }}
+        env:
+          FILENAME: tests/.env
+
+      - name: Run tests
+        run: nix develop --command python3 tests/main.py
+      
+      - name: Print container logs on error
+        if: ${{ failure() }}
+        run: docker logs matrix-mqtt-bridge
+
+  push:
+    name: Push docker image
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request' && github.ref_name == 'main' }}
+    needs: [ test ]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install nix
+        uses: cachix/install-nix-action@v26
+
+      - name: Build container image
+        run: nix build .#containerImage
+
+      - name: Load containerimage into docker
+        run: docker load < result
+
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+      - name: Push container image to GitHub Container Registry
+        run: docker push ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+      
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
 

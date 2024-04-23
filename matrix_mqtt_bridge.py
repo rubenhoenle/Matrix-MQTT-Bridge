@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import time
 import threading
 import asyncio
@@ -6,11 +8,6 @@ import nio
 import paho.mqtt.client as paho
 from paho import mqtt
 from nio import AsyncClient, MatrixRoom, RoomMessageText
-
-# pip3 install configparser
-# pip3 install paho-mqtt
-# pip3 install matrix-nio
-# https://github.com/poljar/matrix-nio
 
 config = configparser.ConfigParser(interpolation=None)
 config.read("config.ini")
